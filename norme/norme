@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+version=0.5
+if [ "$1" == -h ]; then
+    echo "School 21 Norminette / Compile check error"
+    echo "Usage: ./norme [OPTION]"
+    echo "  -i  Ignore error of decloration prototype function error in .c without header."
+    echo "  -v  Output version info."
+    echo "  -h  Output this help."
+    exit 0
+elif [ "$1" == -v ]; then
+    echo "Norme $version"
+    echo "Author: Sjanie / Nourepide"
+    exit 0
+fi
+files=$(find ./* -type f -name "*.c" -o -type f -name "*.h" | tr '\n' ' ')
+separator=$(printf '%0.s-' $(seq 1 "$(tput cols)"))
+if [ "$1" == -i ]; then
+    text="[Ignored flag enabled]"
+    echo "Check norme error$(tput hpa "$(tput cols)")$(tput cub ${#text})$text"
+    # shellcheck disable=SC2086
+    norminette=$(norminette -R CheckForbiddenSourceHeader ${files} |
+        grep -E -B 1 '^(Error|Warning)' |
+        sed "s|Norme: ./|Error in file |")
+else
+    echo "Check norme error"
+    # shellcheck disable=SC2086
+    norminette=$(norminette ${files} |
+        grep -E -B 1 '^(Error|Warning)' |
+        sed "s|Norme: ./|Error in file |")
+fi
+if [ -n "$norminette" ]; then
+    echo "$separator"
+    echo "$norminette"
+    echo "$separator"
+fi
+echo "Check compile error"
+# shellcheck disable=SC2086
+gcc -Wall -Wextra -Werror -c $files 2>Norme.output
+rm -rf ./*.o
+if [ -s ./Norme.output ]; then
+    echo "$separator"
+    cat ./Norme.output
+    echo "$separator"
+fi
+rm -f ./Norme.output
+echo "Check completed"
